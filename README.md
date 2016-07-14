@@ -160,7 +160,7 @@ See [setConfig(options)](#setConfig-options).
 Returns config..
 
 #### setConfig (options)
-** options (optional) **
+**_options (optional)_**
 * `parser`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback (Note: likely you will never want to change this!)
 * `baudRate`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
 * `dataBits`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
@@ -170,7 +170,7 @@ Returns config..
 * `timeout`: (default: `5000`) Command timeout in millisec
 
 #### Promise open (path)
-** path **
+**_path_**
 Denotes path to serial port (on linux typically something like `/tty/tty.serialXYZ`, on windows `COM4`)
 
 #### isOpen ()
@@ -193,8 +193,8 @@ Start automatic processing of command queue.
 #### stopProcessing (abortCurrent, callback)
 Stop automatic processing of command queue.
 
-** boolean abortCurrent (optional) **
-** function callback (optional) **
+**_boolean abortCurrent (optional)_**
+**_function callback (optional)_**
 Callback to run once abortion completes.
 
 
@@ -213,14 +213,14 @@ Returns false if no command is pending at the moment, (Command)[#command] otherw
 
 If and only if no other command is currently being processed, runs the given command
 
-** string|buffer|Command command (required) **
+**_string|buffer|Command command (required)_**
 If it is a (Command)[#command], any other parameters are ignored, otherwise the string|buffer is used as command to write to the serial.
 
-** string|number|regex|function expected (optional, default: `OK`) **
+**_string|number|regex|function expected (optional, default: `OK`)_**
 
-** function callback (optional) **
+**_function callback (optional)_**
 
-** function processor (optional) **
+**_function processor (optional)_**
 
 
 #### Promise addCommand (command, expected, callback, processor)
@@ -231,19 +231,19 @@ The calling semantics are identical to `run(command, expected, callback, process
 #### Promise read (n, callback)
 Shortcut helper to `run` a command that just reads n bytes.
 
-** number n (required) **
+**_number n (required)_**
 Number of bytes to read.
 
-** function callback(buffer) (required) **
+**_function callback(buffer) (required)_**
 
 
 #### Promise write (buffer, callback)
 Shortcut helper to `run` a command that just writes `buffer` to serial and does not wait for a response.
 
-** Buffer buffer (required) **
+**_Buffer buffer (required)_**
 Buffer to write to serial.
 
-** function callback (required) **
+**_function callback (required)_**
 
 #### getInBuffer ()
 Get contents of serial in buffer.
@@ -260,13 +260,13 @@ Clear deregister all notifications.
 #### .addNotification (name, regex, handler)
 Register a new notification.
 
-** string name (required) **
+**_string name (required)_**
 A string to uniquely identify the notification. Will overwrite any previsouly notifications with the same value.
 
-** RegExp regex (required) **
+**_RegExp regex (required)_**
 Matching expression that will be looked out for in the buffer to detect any unsolicited incoming data.
 
-** function handler(Buffer buffer, Array matches) (required) **
+**_function handler(Buffer buffer, Array matches) (required)_**
 Notification handler that will be called once `regex` matches incoming data. Will be passed the whole matches buffer and corresponding matches as arguments.
 
 #### removeNotification (name)
