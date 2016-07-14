@@ -1,14 +1,61 @@
-AT Commander
-======================
+# AT Commander
 
 Promised based AT(tention) command handler for serial ports (typically for use with external modem components and the like).
+
 Features:
 
-- Send simple commands and receive simple responses
+- Send simple commands and receive boolean success/failure responses
 - Catch complex responses and preprocess
 - Set up notifications / event handlers for unsolicited messages
 - Command queue
 
+This module uses the npm https://www.npmjs.com/package/serialport for serial communication.
+
+## Todos
+
+* Complete documentation..
+* Add more serialport configuration options
+* Add default expected result option
+* Consider removing command callback as it works promise based anyways
+* Add timeout per command (certain commands may take a while, whereas many will likely terminate quasi-immediately)
+* Generic refactoring..
+
+## Overview
+
+* [Example](#example)
+* [Classes](#classes)
+  * [Modem](#modem)
+    * [Modem(options)](#modem-options)
+    * [getConfig()](#getConfig)
+    * [setConfig(options)](#setConfig-options)
+    * [open(path)](#promise open-path)
+    * [isOpen()](#isOpen)
+    * [pause()](#pause)
+    * [close(callback)](#close-callback)
+    * [on(event, callback)](#on-event-callback)
+    * [isProcessingCommands()](#isProcessingCommands)
+    * [startProcessing()](#startProcessing)
+    * [stopProcessing(abortCurrent, callback)](#stopProcessing-abortCurrent-callback)
+    * [getPendingCommands()](#getPendingsCommands)
+    * [clearPendingCommands()](#clearPendingCommands)
+    * [getCurrentCommand()](#getCurrentCommand)
+    * [abortCurrentCommand()](#abortCurrentCommand)
+    * [run(command, expected, callback, processor)](#promise-run-command-expected-callback-processor)
+    * [addCommand(command, expected, callback, processor)](#promise-addCommand-command-expected-callback-processor)
+    * [read(n, callback)](#promise-read-n-callback)
+    * [write(buf, callback)](#promise-write-buffer-callback)
+    * [getInBuffer()](#)
+    * [clearInBuffer()](#)
+    * [getNotifications()](#)
+    * [clearNotifications()](#)
+    * [addNotification(name, regex, handler)](#)
+    * [removeNotification(name)](#)
+
+  * [Command](#command)
+  * [Notification](#notification)
+* [Events](#events)
+
+## Example
 
 Example
 
@@ -100,3 +147,135 @@ Example
             modem.close();
         });
     });
+
+
+## Classes
+
+### Modem
+
+#### Modem (options)
+See [setConfig(options)](#setConfig-options).
+
+#### getConfig ()
+Returns config..
+
+#### setConfig (options)
+** options (optional) **
+* `parser`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback (Note: likely you will never want to change this!)
+* `baudRate`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
+* `dataBits`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
+* `stopBits`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
+* `EOL`: (default: `"\r\n"`) Command termination string (is added to every normal string type command)
+* `lineRegex`: (default `"^\r\n(.+)\r\n"`) This RegExp is used to detect one-line responses
+* `timeout`: (default: `5000`) Command timeout in millisec
+
+#### Promise open (path)
+** path **
+Denotes path to serial port (on linux typically something like `/tty/tty.serialXYZ`, on windows `COM4`)
+
+#### isOpen ()
+Facade for https://www.npmjs.com/package/serialport#isopen
+
+#### pause ()
+Facade for https://www.npmjs.com/package/serialport#pause
+
+#### close (callback)
+Facade for https://www.npmjs.com/package/serialport#close-callback
+
+#### on (event, callback)
+
+#### isProcessingCommands ()
+If set to true, command queue will be automatically processed.
+
+#### startProcessing ()
+Start automatic processing of command queue.
+
+#### stopProcessing (abortCurrent, callback)
+Stop automatic processing of command queue.
+
+** boolean abortCurrent (optional) **
+** function callback (optional) **
+Callback to run once abortion completes.
+
+
+#### getPendingCommands ()
+Returns array of pending (Commands)[#command]
+
+#### clearPendingCommands ()
+Cleats pending commands list.
+
+#### getCurrentCommand ()
+Returns false if no command is pending at the moment, (Command)[#command] otherwise.
+
+#### abortCurrentCommand ()
+
+#### Promise run (command, expected, callback, processor)
+
+If and only if no other command is currently being processed, runs the given command
+
+** string|buffer|Command command (required) **
+If it is a (Command)[#command], any other parameters are ignored, otherwise the string|buffer is used as command to write to the serial.
+
+** string|number|regex|function expected (optional, default: `OK`) **
+
+** function callback (optional) **
+
+** function processor (optional) **
+
+
+#### Promise addCommand (command, expected, callback, processor)
+
+Adds the given command to the pending commands list.
+The calling semantics are identical to `run(command, expected, callback, processor)`
+
+#### Promise read (n, callback)
+Shortcut helper to `run` a command that just reads n bytes.
+
+** number n (required) **
+Number of bytes to read.
+
+** function callback(buffer) (required) **
+
+
+#### Promise write (buffer, callback)
+Shortcut helper to `run` a command that just writes `buffer` to serial and does not wait for a response.
+
+** Buffer buffer (required) **
+Buffer to write to serial.
+
+** function callback (required) **
+
+#### getInBuffer ()
+Get contents of serial in buffer.
+
+#### clearInBuffer ()
+Clear contents of serial in buffer.
+
+#### getNotifications ()
+Get array of registered notifications.
+
+#### clearNotifications ()
+Clear deregister all notifications.
+
+#### .addNotification (name, regex, handler)
+Register a new notification.
+
+** string name (required) **
+A string to uniquely identify the notification. Will overwrite any previsouly notifications with the same value.
+
+** RegExp regex (required) **
+Matching expression that will be looked out for in the buffer to detect any unsolicited incoming data.
+
+** function handler(Buffer buffer, Array matches) (required) **
+Notification handler that will be called once `regex` matches incoming data. Will be passed the whole matches buffer and corresponding matches as arguments.
+
+#### removeNotification (name)
+Unregister notification with given name.
+
+
+### Command
+
+### Notification
+
+
+## Events
