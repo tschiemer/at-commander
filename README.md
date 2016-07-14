@@ -14,6 +14,7 @@ This module uses the npm https://www.npmjs.com/package/serialport for serial com
 ## Todos
 
 * Complete documentation..
+* Add tests
 * Add more serialport configuration options
 * Add default expected result option
 * Consider removing command callback as it works promise based anyways
