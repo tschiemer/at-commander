@@ -170,7 +170,9 @@ Returns config..
 * `timeout`: (default: `5000`) Command timeout in millisec
 
 #### Promise open (path)
+
 **_path_**
+
 Denotes path to serial port (on linux typically something like `/tty/tty.serialXYZ`, on windows `COM4`)
 
 #### isOpen ()
@@ -194,7 +196,9 @@ Start automatic processing of command queue.
 Stop automatic processing of command queue.
 
 **_boolean abortCurrent (optional)_**
+
 **_function callback (optional)_**
+
 Callback to run once abortion completes.
 
 
@@ -214,6 +218,7 @@ Returns false if no command is pending at the moment, (Command)[#command] otherw
 If and only if no other command is currently being processed, runs the given command
 
 **_string|buffer|Command command (required)_**
+
 If it is a (Command)[#command], any other parameters are ignored, otherwise the string|buffer is used as command to write to the serial.
 
 **_string|number|regex|function expected (optional, default: `OK`)_**
@@ -232,6 +237,7 @@ The calling semantics are identical to `run(command, expected, callback, process
 Shortcut helper to `run` a command that just reads n bytes.
 
 **_number n (required)_**
+
 Number of bytes to read.
 
 **_function callback(buffer) (required)_**
@@ -241,6 +247,7 @@ Number of bytes to read.
 Shortcut helper to `run` a command that just writes `buffer` to serial and does not wait for a response.
 
 **_Buffer buffer (required)_**
+
 Buffer to write to serial.
 
 **_function callback (required)_**
@@ -261,12 +268,15 @@ Clear deregister all notifications.
 Register a new notification.
 
 **_string name (required)_**
+
 A string to uniquely identify the notification. Will overwrite any previsouly notifications with the same value.
 
 **_RegExp regex (required)_**
+
 Matching expression that will be looked out for in the buffer to detect any unsolicited incoming data.
 
 **_function handler(Buffer buffer, Array matches) (required)_**
+
 Notification handler that will be called once `regex` matches incoming data. Will be passed the whole matches buffer and corresponding matches as arguments.
 
 #### removeNotification (name)
