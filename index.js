@@ -567,7 +567,7 @@ Modem.prototype._onData = function(data){
                 }
             }
 
-            this._serveNotification(false, buf);
+            this._serveNotification(false, line);
 
             // feed notification to generic notification handler
             // if (typeof this.events.notification === 'function'){
