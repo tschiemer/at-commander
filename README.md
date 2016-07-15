@@ -11,19 +11,23 @@ Features:
 
 This module uses the npm https://www.npmjs.com/package/serialport for serial communication.
 
+__Please note__ that this is still a beta version
+
 ## Todos
 
 * Complete documentation..
 * Add tests
 * Add more serialport configuration options
 * Add default expected result option
-* Consider removing command callback as it works promise based anyways
+* Remove command callback as it works promise based anyways
 * Add timeout per command (certain commands may take a while, whereas many will likely terminate quasi-immediately)
 * Generic refactoring..
 
 ## Overview
 
-* [Example](#example)
+* [Usage](#usage)
+  * [Example](#example)
+  * [Promise based commandds](#promise-based-commands)
 * [Classes](#classes)
   * [Modem](#modem)
     * [Modem(options)](#modem-options)
@@ -51,15 +55,13 @@ This module uses the npm https://www.npmjs.com/package/serialport for serial com
     * [clearNotifications()](#)
     * [addNotification(name, regex, handler)](#)
     * [removeNotification(name)](#)
-
   * [Command](#command)
   * [Notification](#notification)
 * [Events](#events)
 
-## Example
+## Usage
 
-Example
-
+### Example
 
     var ATCommander = require('at-commander');
     var Command = ATCommander.Command;
@@ -149,6 +151,79 @@ Example
         });
     });
 
+### Promise based commands
+
+The `Modem` methods `run`, `addCommand` return a promise that will be resolved/rejected with variable parameters that depend on the (Command)[#command] options.
+
+The following setup illustrates the differences
+
+    var CommandStates = require('at-commander').CommandStates;
+
+    // please note, it is also possible to call modem.run directly with the arguments as passed to the constructor of command
+    // modem.run thus is just a nice wrapper
+    var myCommand = new ATCommander.Command(cmd, expected);
+    modem.run(myCommand).then(function(result){
+        if (typeof expected === 'undefined' || typeof expected === 'string'){
+            // result is a boolean denoting wether the one-line response matched the expected value
+            // in case expected was undefined, the default response (OK) is assumed
+            // NOTE this will have to be refactored to make it configurable on the fly
+        }
+        if (typeof expected === 'number'){
+            // result will be of type Buffer container the number of bytes as denoted by expected
+        }
+        if (expected instanceof RegExp){
+            // result will be the return value of inBufferString.match(expected)
+        }
+        if (typeof expected === 'function'){
+            // result will be the relevant inBuffer part that was detected using expected
+        }
+
+
+
+    }).catch(function(command){
+        // in case of an error, the given object is an instance of Command
+        // command is the same object as myCommand
+
+        // furthermore several fields will be set:
+
+        switch (command.state){
+
+            case CommandStates.Init:
+                //this state should never occur in an error case
+                break;
+
+            case CommandStates.Rejected:
+                // this state only occurs when passing a command using .run() (or write(), read())
+                // and denotes the situation where the modem is already processing a command
+                // (this is because .run() bypasses the command queue)
+                break;
+
+            case CommandStates.Running:
+                // this state should never occur in an error case
+                // it denotes that the command is being processed by the modem
+                break;
+
+            case CommandStates.Finished:
+                // this state should never occur in an error case
+                // it denotes that the command terminated as configured
+                break;
+
+            case CommandStates.Timeout:
+                // this state denotes that there was no reply from the attached serial device in the given time constraint
+                // also the contents of the inBuffer will be passed to the command (and consumed from the inBuffer)
+
+                // command.result.buf -> will be a Buffer object
+
+                break;
+
+            case CommandStates.Aborted:
+                // this state denotes that the command was user aborted
+                break;
+        }
+
+
+    });
+
 
 ## Classes
 
@@ -186,6 +261,7 @@ Facade for https://www.npmjs.com/package/serialport#pause
 Facade for https://www.npmjs.com/package/serialport#close-callback
 
 #### on (event, callback)
+Please refer to [Events](#events)
 
 #### isProcessingCommands ()
 If set to true, command queue will be automatically processed.
@@ -214,7 +290,7 @@ Returns false if no command is pending at the moment, (Command)[#command] otherw
 
 #### abortCurrentCommand ()
 
-#### Promise run (command, expected, callback, processor)
+#### run (command, expected, callback, processor)
 
 If and only if no other command is currently being processed, runs the given command
 
@@ -229,7 +305,7 @@ If it is a (Command)[#command], any other parameters are ignored, otherwise the 
 **_function processor (optional)_**
 
 
-#### Promise addCommand (command, expected, callback, processor)
+#### addCommand (command, expected, callback, processor)
 
 Adds the given command to the pending commands list.
 The calling semantics are identical to `run(command, expected, callback, processor)`
@@ -265,18 +341,19 @@ Get array of registered notifications.
 #### clearNotifications ()
 Clear deregister all notifications.
 
-#### .addNotification (name, regex, handler)
+#### .addNotification (notification, regex, handler)
 Register a new notification.
 
-**_string name (required)_**
+**_string|Notification notification (required)_**
 
-A string to uniquely identify the notification. Will overwrite any previsouly notifications with the same value.
+In case a [Notification](#notification) is passed the remaining parameters are ignored.
+Otherwise a string to uniquely identify the notification is expected. Will overwrite any previsouly notifications with the same value.
 
-**_RegExp regex (required)_**
+**_RegExp regex (optional)_**
 
 Matching expression that will be looked out for in the buffer to detect any unsolicited incoming data.
 
-**_function handler(Buffer buffer, Array matches) (required)_**
+**_function handler(Buffer buffer, Array matches) (optional)_**
 
 Notification handler that will be called once `regex` matches incoming data. Will be passed the whole matches buffer and corresponding matches as arguments.
 
@@ -286,7 +363,61 @@ Unregister notification with given name.
 
 ### Command
 
+    var Command = require('at-commander').Command;
+
+    var myCommand = new Command(command, expected, callback, processor);
+
+    modem.run(myCommand); // or
+    modem.addCommand(myCommand);
+
+The constructor semantics are very much identical to the options of [run(command, expected, callback, processor)](#run-command-expected-callback-processor) which serves as shortcut.
+
 ### Notification
 
+    var Notification = require('at-commander').Notification;
+
+    var myNotification = new Notification(name, regex, handler);
+
+    modem.addNotification(myNotification);
+
+Please note that [addNotification(notification, regex, handler)](#addNotification-notification-regex-handler) is the friendly shortcut.
 
 ## Events
+
+Event handlers can be set using `Modem.on(eventName, callback)`
+
+### open
+Please see https://www.npmjs.com/package/serialport#onopen-callback
+
+### close
+https://www.npmjs.com/package/serialport#onclose-callback
+
+### data
+Please see https://www.npmjs.com/package/serialport#ondata-callback
+
+### disconnect
+Please see https://www.npmjs.com/package/serialport#ondisconnect-callback
+
+### error
+Please see https://www.npmjs.com/package/serialport#onerror-callback
+
+### notification
+Will be called if any registered notification matches incoming data.
+WARNING: currently disabled, will have to be refactored
+
+### command
+The command event is triggered if a command _successfully_ completes.
+
+`function callback(Command command, result)`
+
+The type/contents of `result` is according to the command operations (also see section [Promise based commands](#promise-based-commands)).
+The most interesting thing about this callback is that it contains the used `Command` object which in particular also has the following interesting properties:
+
+    command.result.buf -> complete accepted response of type Buffer
+    command.result.matches -> if and only if an expected response using a matching mechanism is used: the resulting matches
+    command.result.processed -> if and only if a (default or custom) processor function is passed to the command (will be the same as result)
+
+### discarding
+The discarding event is triggered if the inBuffer discards data due to a timeout.
+
+`function callback(Buffer buffer)`

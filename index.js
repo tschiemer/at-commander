@@ -329,9 +329,13 @@ Modem.prototype.getNotifications = function()
     return this.notifications;
 };
 
-Modem.prototype.addNotification = function(name, regex, handler)
+Modem.prototype.addNotification = function(notification, regex, handler)
 {
-    this.notifications[name] = new Notification(name, regex, handler);
+    if (notification instanceof Notification){
+        this.notifications[notification.name] = notification;
+    } else {
+        this.notifications[notification] = new Notification(notification, regex, handler);
+    }
     return this;
 };
 
@@ -567,7 +571,7 @@ Modem.prototype._onData = function(data){
                 }
             }
 
-            this._serveNotification(false, line);
+            // this._serveNotification(false, new Buffer(), line);
 
             // feed notification to generic notification handler
             // if (typeof this.events.notification === 'function'){
@@ -659,7 +663,7 @@ Modem.prototype._serveNotification = function(notification, buf, matches)
     } else {
         // feed notification to generic notification handler
         if (typeof this.events.notification === 'function') {
-            this.events.notification(buf);
+            this.events.notification(matches);
         }
     }
 };
