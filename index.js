@@ -173,19 +173,19 @@ Modem.prototype._registerSerialEvents = function(){
         }
     });
     this.serial.on('disconnect', function(error){
-        console.log('disconnect');
+        // console.log('disconnect');
         if (typeof modem.events.disconnect === 'function'){
             modem.events.disconnect(error);
         }
     });
     this.serial.on('close', function(error){
-        console.log('close');
+        // console.log('close');
         if (typeof modem.events.close === 'function'){
             modem.events.close(error);
         }
     });
     this.serial.on('error', function(error){
-        console.log('error', error);
+        // console.log('error', error);
 
         if (typeof modem.events.error === 'function'){
             modem.events.error(error);
@@ -465,10 +465,10 @@ Modem.prototype._run = function(command)
     command.state = CommandStateRunning;
 
     if (typeof command.buf === 'string'){
-        console.log("Serial.write",new Buffer(command.buf), command.buf);
+        // console.log("Serial.write",new Buffer(command.buf), command.buf);
         this.serial.write(command.buf + this.config.EOL);
     } else if (command.buf instanceof Buffer){
-        console.log("Serial.write", command.buf);
+        // console.log("Serial.write", command.buf);
         this.serial.write(command.buf);
     }
 
@@ -490,7 +490,7 @@ Modem.prototype._onData = function(data){
 
     this.inbuf = Buffer.concat([this.inbuf, data]);
 
-    console.log("after!", this.inbuf, this.inbuf.toString());
+    // console.log("after!", this.inbuf, this.inbuf.toString());
 
     // this.clear
 
