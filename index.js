@@ -48,7 +48,7 @@ function Modem(config)
     this.notifications = {};
 }
 
-function Command(buf, expectedResult, resultCallback, resultProcessor)
+function Command(buf, expectedResult, resultProcessor)
 {
     this.id = getNextId();
     this.state = CommandStateInit;
@@ -83,10 +83,6 @@ function Command(buf, expectedResult, resultCallback, resultProcessor)
                 return buf;
             }
         }
-    }
-
-    if (typeof resultCallback === 'function') {
-        this.resultCallback = resultCallback;
     }
 }
 
@@ -191,22 +187,6 @@ Modem.prototype._registerSerialEvents = function(){
             modem.events.error(error);
         }
     });
-
-    /*
-     var events = ['open','data','close','disconnect','data'];
-     for (var i in events){
-     var e = events[i];
-     this.serial.on(e,function(data){
-     console.log(e, data);
-     var onEvent = '_on' + e.charAt(0).toUpperCase() + e.slice(1);;
-     if (typeof modem[onEvent] === 'function'){
-     modem[onEvent](data);
-     }
-     if (typeof modem.events[e] === 'function'){
-     modem.events[e](data);
-     }
-     });
-     }*/
 };
 
 Modem.prototype.isOpen = function(){
@@ -357,10 +337,10 @@ Modem.prototype.clearNotifications = function()
  * Run command bypassing command list (processing option)
  * @param command
  */
-Modem.prototype.run = function(command, expected, cb, processor)
+Modem.prototype.run = function(command, expected, processor)
 {
     if (!(command instanceof Command)){
-        command = new Command(command, expected, cb, processor);
+        command = new Command(command, expected, processor);
     }
     if (this.currentCommand instanceof Command || this.inbuf.length > 0){
         command.state = CommandStateRejected;
@@ -374,10 +354,10 @@ Modem.prototype.run = function(command, expected, cb, processor)
  * Add command to processing list
  * @param command
  */
-Modem.prototype.addCommand = function(command, expected, cb, processor)
+Modem.prototype.addCommand = function(command, expected, processor)
 {
     if (!(command instanceof Command)){
-        command = new Command(command, expected, cb, processor);
+        command = new Command(command, expected, processor);
     }
     this.pendingCommands.push(command);
     this._checkPendingCommands();
@@ -414,9 +394,9 @@ function _promiseForCommand(command)
  * @param cb
  * @returns {*}
  */
-Modem.prototype.read = function(n, cb)
+Modem.prototype.read = function(n)
 {
-    return this.run(new Command(false, n, cb));
+    return this.run(new Command(false, n));
 };
 
 /**
@@ -425,9 +405,9 @@ Modem.prototype.read = function(n, cb)
  * @param cb
  * @returns {*}
  */
-Modem.prototype.write = function(buf, cb)
+Modem.prototype.write = function(buf)
 {
-    return this.run(new Command(buf, 0, cb));
+    return this.run(new Command(buf, 0));
 }
 
 
@@ -473,14 +453,6 @@ Modem.prototype._run = function(command)
     }
 
     this._setBufferTimeout();
-
-    //command._writeTo(this, this.config.EOL);
-
-    // var str = command.str + this.config.EOL;
-    // this.serial.write(str);
-
-    // wait until command has been completely written to serial
-    // this.serial.drain();
 };
 
 
@@ -634,11 +606,6 @@ Modem.prototype._serveCommand = function(command, state, buf, matches)
 
     // by setting the state to a final state, the promise will finish by itself
     command.state = state;
-
-    // if a result handler has been set specifically, call it
-    if (typeof command.resultCallback === 'function'){
-        command.resultCallback(command.result.processed);
-    }
 
     // feed command to generic command result handler
     if (typeof this.events.command === 'function'){
