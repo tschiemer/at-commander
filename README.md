@@ -18,7 +18,6 @@ __Please note__ that this is still a beta version
 * Complete documentation..
 * Add tests
 * Add more serialport configuration options
-* Add default expected result option
 * Add timeout per command (certain commands may take a while, whereas many will likely terminate quasi-immediately)
 * Generic refactoring..
 
