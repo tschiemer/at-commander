@@ -4,7 +4,7 @@ Promise based AT(tention) command handler for serial ports (typically for use wi
 
 This module is ment to serve only as a basis for your specific device implementations - it is rather device agnostic, so to speak.
 
-For a sample (beta) implementation see [telit-modem](https://www.npmjs.com/package/telit-modem)
+For a sample (beta) implementation of a real device see [telit-modem](https://www.npmjs.com/package/telit-modem)
 
 Features:
 
