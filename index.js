@@ -251,7 +251,7 @@ Modem.prototype._close = function(cb, gracefully)
         if (gracefully && this.processCommands && (this.currentCommand instanceof Command || this.pendingCommands.length)){
             this.addCommand("AT").done(() => {
                 this.serial.close(cb);
-            });
+        });
         } else {
             this.stopProcessing(true);
             this.serial.close(cb);

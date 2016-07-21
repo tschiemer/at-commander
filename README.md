@@ -18,7 +18,6 @@ __Please note that this is still a beta version__
 * Complete documentation..
 * Add tests
 * Add more serialport configuration options
-* Add timeout per command (certain commands may take a while, whereas many will likely terminate quasi-immediately)
 * Generic refactoring..
 
 ## Overview
@@ -289,7 +288,7 @@ Returns false if no command is pending at the moment, (Command)[#command] otherw
 
 #### abortCurrentCommand ()
 
-#### run (command, expected, callback, processor)
+#### run (command, expected, options)
 
 If and only if no other command is currently being processed, runs the given command
 
@@ -299,12 +298,13 @@ If it is a (Command)[#command], any other parameters are ignored, otherwise the 
 
 **_string|number|regex|function expected (optional, default: `OK`)_**
 
-**_function callback (optional)_**
+**_object options (optional)_**
 
-**_function processor (optional)_**
+* `timeout`: command timeout in msec (if not defined, default of modem is used, see setConfig())
+* `resultProcessor`: result preprocessor, it's result will be considered the processed and final result as passed to promise
 
 
-#### addCommand (command, expected, callback, processor)
+#### addCommand (command, expected, options)
 
 Adds the given command to the pending commands list.
 The calling semantics are identical to `run(command, expected, callback, processor)`
