@@ -710,7 +710,7 @@ Modem.prototype._setBufferTimeout = function()
             // not necessarily want to discard, so just discard one line at most
             if (modem._discardLine()) {
 
-                if (this.inbuf.length) {
+                if (modem.inbuf.length) {
                     while (modem._checkForNotifications()) {
                         // whilst there are notifications..
                     }
@@ -719,11 +719,11 @@ Modem.prototype._setBufferTimeout = function()
                 var buf = modem.inbuf;
                 modem.inbuf = new Buffer(0);
 
-                if (typeof this.events.discarding === 'function'){
-                    this.events.discarding(buf);
+                if (typeof modem.events.discarding === 'function'){
+                    modem.events.discarding(buf);
                 }
             }
-            if (this.inbuf.length){
+            if (modem.inbuf.length){
                 modem._checkPendingCommands();
             }
         }
