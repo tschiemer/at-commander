@@ -118,7 +118,7 @@ Modem.prototype.setConfig = function(newConfig){
         baudRate: 115200,
         dataBits: 8,
         stopBits: 1,
-        lineRegex: /^\r\n(.+)\r\n/,
+        lineRegex: /^(.+)\r\n/,
         EOL: "\r\n",
         timeout: 5000
     }, newConfig || {});
@@ -144,11 +144,16 @@ Modem.prototype.open = function(path)
 
     this._registerSerialEvents();
 
-    var serial = this.serial;
+    var modem = this;
     return new Promise(function(resolve, reject){
-        serial.open(function(error){
+        modem.serial.open(function(error){
             if (error) reject(error);
-            else resolve(serial.isOpen());
+            else {
+                // write a newline to the serial because it is unknown what was last written to the serial before opening
+                modem.serial.write(modem.config.EOL);
+
+                resolve(modem.serial.isOpen());
+            }
         });
     });
 };
@@ -462,6 +467,14 @@ Modem.prototype._onData = function(data){
 
     this.inbuf = Buffer.concat([this.inbuf, data]);
 
+    // remove newline prefixes
+    if (this._trimNewlinePrefix()){
+        // do not attempt to process if buffer is empty anyways
+        if (this.inbuf.length == 0){
+            return;
+        }
+    }
+
     // console.log("after!", this.inbuf, this.inbuf.toString());
 
     // this.clear
@@ -491,7 +504,7 @@ Modem.prototype._onData = function(data){
                 // matches = matches[1];
             }
         } else if (typeof this.currentCommand.expectedResult === 'number') {
-            console.log('is type number');
+            // console.log('is type number');
             if (this.currentCommand.expectedResult <= this.inbuf.length) {
                 finishCommand = true;
                 consumeBufBytes = this.currentCommand.expectedResult;
@@ -516,52 +529,97 @@ Modem.prototype._onData = function(data){
             // get copy of relevant buffer contents
             // pass relevant in buffer to result handler
             this._serveCommand(this.currentCommand, CommandStateFinished, consumedBuf, matches);
-            // this._setBufferTimeout();
-            // this.currentCommand.resultCallback(buf, matches);
+
+            // matchings for commands might be incorrectly finished such that a newline is forgotten to be added
+            // because notifications do not expect there to be an initial newline, trim it away
+            this._trimNewlinePrefix();
         }
     }
-    // if (!(this.currentCommand instanceof Command))
-    { // if no command was sent, we're likely dealing with an unsolicited notification
-        var str = this.inbuf.toString();
-        var line = str.match(this.config.lineRegex);
-        if (line){
-            // cons¿ole.log("matched a line");
-            for (var i in this.notifications){
-                var matches = str.match(this.notifications[i].regex);
-                // console.log("testing ",str," against ", this.notifications[i].regex);
-                if (matches !== null){
-                    // copy matching buffer
 
-                    var buf = this.inbuf.slice(0, matches[0].length);
+    // Ideally, if no command was sent we're likely dealing with an unsolicited notification if data is incoming.
+    // But due to timing/buffering effects there might be an overlap of a command being registered as running while
+    // an unsolicited message is incoming.
+    // That means it becomes a bit harder to differentiate between command responses and unsolicited messages - but quite
+    // likely this will go unnoticed, as typically command responses and unsolicited messages (even though they might
+    // relate to the same info) have slightly different formatting. That also means, that you as a user are responsible
+    // for making sure you specify precise enough match phrases.
 
-                    // console.log("STRIPPING ",buf, buf.toString());
-
-                    // update inbuf consuming matching buffer
-                    this.inbuf = this.inbuf.slice(matches[0].length);
-
-                    this._serveNotification(this.notifications[i], buf, matches);
-                }
-            }
-
-            // this._serveNotification(false, new Buffer(), line);
-
-            // feed notification to generic notification handler
-            // if (typeof this.events.notification === 'function'){
-            //     this.events.notification(buf);
-            // }
-        }
-
-        // this._setBufferTimeout();
+    while(this._checkForNotifications()){
+        // continue trying to consume notifications until there is none detected
     }
+
     this._setBufferTimeout();
+};
+
+Modem.prototype._trimNewlinePrefix = function()
+{
+    var m = this.inbuf.toString().match(/^((\r|\n)+)/);
+
+    if (m) {
+        this.inbuf = this.inbuf.slice(m[0].length);
+        return true;
+    }
+
+    return false;
+}
+
+Modem.prototype._checkForNotifications = function()
+{
+    var detected = false;
+
+    var str = this.inbuf.toString();
+    var line = str.match(this.config.lineRegex);
+    if (line){
+        // cons¿ole.log("matched a line");
+        for (var i in this.notifications){
+            var matches = str.match(this.notifications[i].regex);
+            // console.log("testing ",str," against ", this.notifications[i].regex);
+            if (matches !== null){
+                // copy matching buffer
+
+                var buf = this.inbuf.slice(0, matches[0].length);
+
+
+                // update inbuf consuming matching buffer
+                this.inbuf = this.inbuf.slice(matches[0].length);
+
+                // console.log("STRIPPING ",buf, buf.toString());
+                // console.log("REMAINING ",this.inbuf, this.inbuf.toString());
+
+                this._serveNotification(this.notifications[i], buf, matches);
+
+
+                // just for safety, trim any remaining newlines
+                this._trimNewlinePrefix();
+
+                detected = true;
+                break;
+            }
+        }
+
+        // this._serveNotification(false, new Buffer(), line);
+
+        // feed notification to generic notification handler
+        // if (typeof this.events.notification === 'function'){
+        //     this.events.notification(buf);
+        // }
+    }
+
+    return detected;
 };
 
 Modem.prototype._setBufferTimeout = function()
 {
     this._clearBufferTimeout();
 
+    // do not set timeout, if neither serving a command, nor any data in buffer
+    if (!(this.currentCommand instanceof Command) && this.inbuf.length == 0){
+        return;
+    }
+
     var modem = this;
     this.bufferTimeout = setTimeout(function(){
+
         // console.log("timeout", modem.inbuf);
         if (modem.currentCommand instanceof Command){
             var command = modem.currentCommand;
@@ -571,7 +629,9 @@ Modem.prototype._setBufferTimeout = function()
             modem.inbuf = new Buffer(0);
             modem.currentCommand = false;
             command.state = CommandStateTimeout;
+
         } else {
+
             if (typeof modem.events.discarding === 'function'){
                 modem.events.discarding(modem.inbuf);
             }
