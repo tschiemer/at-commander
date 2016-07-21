@@ -431,6 +431,11 @@ Modem.prototype._checkPendingCommands = function()
     if (this.currentCommand instanceof Command){
         return;
     }
+    // require there not to be anything left in the buffer, before starting another command
+    if (this.inbuf.length > 0){
+        this._setBufferTimeout();
+        return;
+    }
     // if not processing just do nothing
     if (!this.processCommands){
         return;
@@ -440,11 +445,6 @@ Modem.prototype._checkPendingCommands = function()
         return;
     }
 
-    // require there not to be anything left in the buffer, before starting another command
-    if (this.inbuf.length > 0){
-        this._setBufferTimeout();
-        return;
-    }
 
     var command = this.pendingCommands[0];
     this.pendingCommands = this.pendingCommands.slice(1);
@@ -616,6 +616,27 @@ Modem.prototype._checkForNotifications = function()
     return detected;
 };
 
+Modem.prototype._discardLine = function()
+{
+    var str = this.inbuf.toString();
+    var line = str.match(this.config.lineRegex);
+    if (line){
+
+        var buf = this.inbuf.slice(0,line[0].length);
+        this.inbuf = this.inbuf.slice(line[0].length);
+
+        if (typeof this.events.discarding === 'function'){
+            this.events.discarding(buf);
+        }
+
+        this._trimNewlinePrefix();
+
+        return true;
+    }
+
+    return false;
+};
+
 Modem.prototype._setBufferTimeout = function()
 {
     this._clearBufferTimeout();
@@ -640,11 +661,26 @@ Modem.prototype._setBufferTimeout = function()
 
         } else {
 
-            if (typeof modem.events.discarding === 'function'){
-                modem.events.discarding(modem.inbuf);
+            // if there happen to be unexpected notifications they might block following notifications which we do
+            // not necessarily want to discard, so just discard one line at most
+            if (modem._discardLine()) {
+
+                if (this.inbuf.length) {
+                    while (modem._checkForNotifications()) {
+                        // whilst there are notifications..
+                    }
+                }
+            } else { // if no line detected, discard whole buffer
+                var buf = modem.inbuf;
+                modem.inbuf = new Buffer(0);
+
+                if (typeof this.events.discarding === 'function'){
+                    this.events.discarding(buf);
+                }
             }
-            modem.inbuf = new Buffer(0);
-            modem._checkPendingCommands();
+            if (this.inbuf.length){
+                modem._checkPendingCommands();
+            }
         }
     }, this.config.timeout);
 };

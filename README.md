@@ -11,7 +11,7 @@ Features:
 
 This module uses the npm https://www.npmjs.com/package/serialport for serial communication.
 
-__Please note__ that this is still a beta version
+__Please note that this is still a beta version__
 
 ## Todos
 
@@ -78,8 +78,8 @@ __Please note__ that this is still a beta version
         // this regex is used by default to detect one-line responses
         lineRegex: /^\r\n(.+)\r\n/,
 
-        // command timeout
-        timeout: 5000
+        // (default) command timeout
+        timeout: 500
     };
 
     var modem = new ATCommander.Modem(opts);
@@ -240,8 +240,8 @@ Returns config..
 * `dataBits`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
 * `stopBits`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
 * `EOL`: (default: `"\r\n"`) Command termination string (is added to every normal string type command)
-* `lineRegex`: (default `"^\r\n(.+)\r\n"`) This RegExp is used to detect one-line responses
-* `timeout`: (default: `5000`) Command timeout in millisec
+* `lineRegex`: (default `"^(.+)\r\n"`) This RegExp is used to detect one-line responses and notifications.
+* `timeout`: (default: `500`) default command timeout in millisec
 * `defaultExpectdResult`: (default: `"OK"`) Expected result if none given (see run(), addCommand)
 
 #### Promise open (path)
