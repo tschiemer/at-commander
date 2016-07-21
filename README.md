@@ -1,6 +1,10 @@
 # AT Commander
 
-Promised based AT(tention) command handler for serial ports (typically for use with external modem components and the like).
+Promise based AT(tention) command handler for serial ports (typically for use with external modem components and the like).
+
+This module is ment to serve only as a basis for your specific device implementations - it is rather device agnostic, so to speak.
+
+For a sample (beta) implementation see [telit-modem](https://www.npmjs.com/package/telit-modem)
 
 Features:
 
@@ -34,6 +38,7 @@ __Please note that this is still a beta version__
     * [isOpen()](#isOpen)
     * [pause()](#pause)
     * [close(callback)](#close-callback)
+    * [closeGracefully(callback)](#closeGracefully-callback)
     * [on(event, callback)](#on-event-callback)
     * [isProcessingCommands()](#isProcessingCommands)
     * [startProcessing()](#startProcessing)
@@ -256,7 +261,11 @@ Facade for https://www.npmjs.com/package/serialport#isopen
 Facade for https://www.npmjs.com/package/serialport#pause
 
 #### close (callback)
-Facade for https://www.npmjs.com/package/serialport#close-callback
+Forces serial shutdown. Facade for https://www.npmjs.com/package/serialport#close-callback
+
+#### closeGracefully (callback)
+If tries to finish any pending commands before shutting down serial.
+
 
 #### on (event, callback)
 Please refer to [Events](#events)
