@@ -19,7 +19,6 @@ __Please note__ that this is still a beta version
 * Add tests
 * Add more serialport configuration options
 * Add default expected result option
-* Remove command callback as it works promise based anyways
 * Add timeout per command (certain commands may take a while, whereas many will likely terminate quasi-immediately)
 * Generic refactoring..
 
