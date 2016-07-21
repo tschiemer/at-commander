@@ -243,6 +243,7 @@ Returns config..
 * `EOL`: (default: `"\r\n"`) Command termination string (is added to every normal string type command)
 * `lineRegex`: (default `"^\r\n(.+)\r\n"`) This RegExp is used to detect one-line responses
 * `timeout`: (default: `5000`) Command timeout in millisec
+* `defaultExpectdResult`: (default: `"OK"`) Expected result if none given (see run(), addCommand)
 
 #### Promise open (path)
 
@@ -309,24 +310,23 @@ If it is a (Command)[#command], any other parameters are ignored, otherwise the 
 Adds the given command to the pending commands list.
 The calling semantics are identical to `run(command, expected, callback, processor)`
 
-#### Promise read (n, callback)
+#### Promise read (n, )
 Shortcut helper to `run` a command that just reads n bytes.
 
 **_number n (required)_**
 
 Number of bytes to read.
 
-**_function callback(buffer) (required)_**
+Returns a promise.
 
-
-#### Promise write (buffer, callback)
+#### write (buffer)
 Shortcut helper to `run` a command that just writes `buffer` to serial and does not wait for a response.
 
 **_Buffer buffer (required)_**
 
 Buffer to write to serial.
 
-**_function callback (required)_**
+Returns a promise.
 
 #### getInBuffer ()
 Get contents of serial in buffer.

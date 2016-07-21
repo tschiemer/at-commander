@@ -50,18 +50,16 @@ function Modem(config)
 
 function Command(buf, expectedResult, resultProcessor)
 {
+    if (typeof expectedResult === 'undefined') {
+        throw new Error("An expected result is required, none given");
+    }
+
     this.id = getNextId();
     this.state = CommandStateInit;
-
-    this.buf = buf;
-
     this.result = false;
 
-    if (typeof expectedResult === 'undefined') {
-        this.expectedResult = 'OK';
-    } else {
-        this.expectedResult = expectedResult;
-    }
+    this.buf = buf;
+    this.expectedResult = expectedResult;
 
     if (typeof resultProcessor === 'function') {
         this.resultProcessor = resultProcessor;
@@ -120,7 +118,8 @@ Modem.prototype.setConfig = function(newConfig){
         stopBits: 1,
         lineRegex: /^(.+)\r\n/,
         EOL: "\r\n",
-        timeout: 5000
+        timeout: 5000,
+        defaultExpectdResult: "OK"
     }, newConfig || {});
 
 
@@ -345,7 +344,7 @@ Modem.prototype.clearNotifications = function()
 Modem.prototype.run = function(command, expected, processor)
 {
     if (!(command instanceof Command)){
-        command = new Command(command, expected, processor);
+        command = this._newCommand(command, expected, processor);
     }
     if (this.currentCommand instanceof Command || this.inbuf.length > 0){
         command.state = CommandStateRejected;
@@ -362,7 +361,7 @@ Modem.prototype.run = function(command, expected, processor)
 Modem.prototype.addCommand = function(command, expected, processor)
 {
     if (!(command instanceof Command)){
-        command = new Command(command, expected, processor);
+        command = this._newCommand(command, expected, processor);
     }
     this.pendingCommands.push(command);
     this._checkPendingCommands();
@@ -391,6 +390,15 @@ function _promiseForCommand(command)
             }
         },100);
     });
+}
+
+Modem.prototype._newCommand = function(command, expected, processor)
+{
+    if (typeof expected === 'undefined'){
+        return new Command(command, this.config.defaultExpectdResult, processor);
+    } else {
+        return new Command(command, expected, processor);
+    }
 }
 
 /**
