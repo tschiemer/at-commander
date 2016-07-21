@@ -48,7 +48,7 @@ function Modem(config)
     this.notifications = {};
 }
 
-function Command(buf, expectedResult, resultProcessor)
+function Command(buf, expectedResult, opts)
 {
     if (typeof expectedResult === 'undefined') {
         throw new Error("An expected result is required, none given");
@@ -61,9 +61,11 @@ function Command(buf, expectedResult, resultProcessor)
     this.buf = buf;
     this.expectedResult = expectedResult;
 
-    if (typeof resultProcessor === 'function') {
-        this.resultProcessor = resultProcessor;
-    } else if (typeof resultProcessor === 'undefined' || resultProcessor === true) {
+    opts = opts || {};
+
+    if (typeof opts.resultProcessor === 'function') {
+        this.resultProcessor = opts.resultProcessor;
+    } else if (typeof opts.resultProcessor === 'undefined' || opts.resultProcessor === true) {
         if (typeof this.expectedResult === 'string') {
             this.resultProcessor = function(buf, result) {
                 if (result instanceof Array){
@@ -82,6 +84,8 @@ function Command(buf, expectedResult, resultProcessor)
             }
         }
     }
+
+    this.timeout = opts.timeout;
 }
 
 function Notification(name, regex, handler)
@@ -193,22 +197,44 @@ Modem.prototype._registerSerialEvents = function(){
     });
 };
 
-Modem.prototype.isOpen = function(){
-    if (!this.serial instanceof serialport.SerialPort){
+Modem.prototype.isOpen = function()
+{
+    if (!(this.serial instanceof serialport.SerialPort)){
         return false;
     }
     return this.serial.isOpen();
 };
 
-Modem.prototype.pause = function(){
-    if (!this.serial instanceof serialport.SerialPort){
+Modem.prototype.pauseSerial = function()
+{
+    if (!(this.serial instanceof serialport.SerialPort)){
         return false;
     }
     this.serial.pause();
     return this;
 };
 
-Modem.prototype.close = function(cb){
+Modem.prototype.resumeSerial = function()
+{
+    if (!(this.serial instanceof serialport.SerialPort)){
+        return false;
+    }
+    this.serial.resume();
+    return this;
+};
+
+Modem.prototype.close = function(cb)
+{
+    return this._close(cb, true);
+};
+
+Modem.prototype.closeGracefully = function(cb)
+{
+    return this._close(cb, false);
+};
+
+Modem.prototype._close = function(cb, gracefully)
+{
     if (typeof cb !== 'function') {
         if (typeof this.events.close === 'function') {
             cb = this.events.close;
@@ -218,12 +244,19 @@ Modem.prototype.close = function(cb){
     }
 
     if (this.serial instanceof serialport.SerialPort){
-        this.serial.close(cb);
+        if (gracefully && this.processCommands && (this.currentCommand instanceof Command || this.pendingCommands.length)){
+            this.addCommand("AT").done(() => {
+                this.serial.close(cb);
+            });
+        } else {
+            this.stopProcessing(true);
+            this.serial.close(cb);
+        }
     } else {
         cb();
     }
     return this;
-};
+}
 
 Modem.prototype.on = function(event, callback)
 {
@@ -341,10 +374,10 @@ Modem.prototype.clearNotifications = function()
  * Run command bypassing command list (processing option)
  * @param command
  */
-Modem.prototype.run = function(command, expected, processor)
+Modem.prototype.run = function(command, expected, opts)
 {
     if (!(command instanceof Command)){
-        command = this._newCommand(command, expected, processor);
+        command = this._newCommand(command, expected, opts);
     }
     if (this.currentCommand instanceof Command || this.inbuf.length > 0){
         command.state = CommandStateRejected;
@@ -358,10 +391,10 @@ Modem.prototype.run = function(command, expected, processor)
  * Add command to processing list
  * @param command
  */
-Modem.prototype.addCommand = function(command, expected, processor)
+Modem.prototype.addCommand = function(command, expected, opts)
 {
     if (!(command instanceof Command)){
-        command = this._newCommand(command, expected, processor);
+        command = this._newCommand(command, expected, opts);
     }
     this.pendingCommands.push(command);
     this._checkPendingCommands();
@@ -392,12 +425,12 @@ function _promiseForCommand(command)
     });
 }
 
-Modem.prototype._newCommand = function(command, expected, processor)
+Modem.prototype._newCommand = function(command, expected, opts)
 {
     if (typeof expected === 'undefined'){
-        return new Command(command, this.config.defaultExpectdResult, processor);
+        return new Command(command, this.config.defaultExpectdResult, opts);
     } else {
-        return new Command(command, expected, processor);
+        return new Command(command, expected, opts);
     }
 }
 
@@ -469,10 +502,9 @@ Modem.prototype._run = function(command)
 };
 
 
-Modem.prototype._onData = function(data){
+Modem.prototype._onData = function(data)
+{
     // update buffer
-    // console.log("before!", this.inbuf);
-
     this.inbuf = Buffer.concat([this.inbuf, data]);
 
     // remove newline prefixes
@@ -483,9 +515,8 @@ Modem.prototype._onData = function(data){
         }
     }
 
-    // console.log("after!", this.inbuf, this.inbuf.toString());
+    // console.log("INBUF", this.inbuf, this.inbuf.toString());
 
-    // this.clear
 
     // if a command was previously sent, we are expecting a result
     if (this.currentCommand instanceof Command){
@@ -646,6 +677,16 @@ Modem.prototype._setBufferTimeout = function()
         return;
     }
 
+    var timeout = this.config.timeout;
+    if (this.currentCommand instanceof Command && typeof this.currentCommand.timeout === 'number'){
+        timeout = this.currentCommand.timeout;
+    }
+
+    // no timeout if value is zero
+    if (timeout == 0){
+        return;
+    }
+
     var modem = this;
     this.bufferTimeout = setTimeout(function(){
 
@@ -682,7 +723,7 @@ Modem.prototype._setBufferTimeout = function()
                 modem._checkPendingCommands();
             }
         }
-    }, this.config.timeout);
+    }, timeout);
 };
 
 Modem.prototype._clearBufferTimeout = function()
