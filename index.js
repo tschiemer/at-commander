@@ -118,14 +118,14 @@ Modem.prototype.setConfig = function(newConfig){
 
 
     this.config = Object.assign({
-            parser: serialport.parsers.raw,
-            baudRate: 115200,
-            dataBits: 8,
-            stopBits: 1,
-            lineRegex: /^\r\n(.+)\r\n/,
-            EOL: "\r\n",
-            timeout: 5000
-        }, newConfig || {});
+        parser: serialport.parsers.raw,
+        baudRate: 115200,
+        dataBits: 8,
+        stopBits: 1,
+        lineRegex: /^\r\n(.+)\r\n/,
+        EOL: "\r\n",
+        timeout: 5000
+    }, newConfig || {});
 
 
 };
@@ -193,20 +193,20 @@ Modem.prototype._registerSerialEvents = function(){
     });
 
     /*
-    var events = ['open','data','close','disconnect','data'];
-    for (var i in events){
-        var e = events[i];
-        this.serial.on(e,function(data){
-            console.log(e, data);
-            var onEvent = '_on' + e.charAt(0).toUpperCase() + e.slice(1);;
-            if (typeof modem[onEvent] === 'function'){
-                modem[onEvent](data);
-            }
-            if (typeof modem.events[e] === 'function'){
-                modem.events[e](data);
-            }
-        });
-    }*/
+     var events = ['open','data','close','disconnect','data'];
+     for (var i in events){
+     var e = events[i];
+     this.serial.on(e,function(data){
+     console.log(e, data);
+     var onEvent = '_on' + e.charAt(0).toUpperCase() + e.slice(1);;
+     if (typeof modem[onEvent] === 'function'){
+     modem[onEvent](data);
+     }
+     if (typeof modem.events[e] === 'function'){
+     modem.events[e](data);
+     }
+     });
+     }*/
 };
 
 Modem.prototype.isOpen = function(){
