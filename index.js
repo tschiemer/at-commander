@@ -114,17 +114,20 @@ Modem.prototype.setConfig = function(newConfig){
         newConfig = {};
     }
 
+    if (typeof this.config === 'undefined'){
+        this.config = {
+            parser: serialport.parsers.raw,
+            baudRate: 115200,
+            dataBits: 8,
+            stopBits: 1,
+            lineRegex: /^(.+)\r\n/,
+            EOL: "\r\n",
+            timeout: 5000,
+            defaultExpectdResult: "OK"
+        };
+    }
 
-    this.config = Object.assign({
-        parser: serialport.parsers.raw,
-        baudRate: 115200,
-        dataBits: 8,
-        stopBits: 1,
-        lineRegex: /^(.+)\r\n/,
-        EOL: "\r\n",
-        timeout: 5000,
-        defaultExpectdResult: "OK"
-    }, newConfig || {});
+    this.config = Object.assign(this.config, newConfig || {});
 
 
 };
