@@ -24,7 +24,7 @@ This module uses the npm https://www.npmjs.com/package/serialport for serial com
 * Add more serialport configuration options (modem options are passthrough anyway, so just note that in the documentation...)
 * Add tests
 * Generic refactoring
-* Rethink timeout principle - is it ok like this or should it be remodelled? (timeout not absolute to actual command start but relative to last incoming data)
+* Rethink timeout principle - is it ok like this or should it be remodelled? (timeout not absolute to actual command start but relative to last incoming data) (-> process.nextTick ??)
 
 ## Possible issues
 
