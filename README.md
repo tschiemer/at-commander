@@ -1,5 +1,7 @@
 # AT Commander
 
+__Please note that this is still a beta version__
+
 Promise based AT(tention) command handler for serial ports (typically for use with external modem components and the like).
 
 This module is ment to serve only as a basis for your specific device implementations - it is rather device agnostic, so to speak.
@@ -15,26 +17,32 @@ Features:
 
 This module uses the npm https://www.npmjs.com/package/serialport for serial communication.
 
-__Please note that this is still a beta version__
 
 ## Todos
 
 * Complete documentation..
+* Add more serialport configuration options (modem options are passthrough anyway, so just note that in the documentation...)
 * Add tests
-* Add more serialport configuration options
-* Generic refactoring..
+* Generic refactoring
+* Rethink timeout principle - is it ok like this or should it be remodelled? (timeout not absolute to actual command start but relative to last incoming data)
+
+## Possible issues
+
+In case something doesn't work as expected, please first look here.
+
+* After an inbuffer handling change (auto-discard of CR/NL prefixes) reading a specific number of bytes might have an unexpected behaviour. Well, changing this ment a simplification of usage but also a change in semantics as incoming data is being interpreted.
 
 ## Overview
 
 * [Usage](#usage)
   * [Example](#example)
-  * [Promise based commandds](#promise-based-commands)
+  * [Promise based commands](#promise-based-commands)
 * [Classes](#classes)
   * [Modem](#modem)
     * [Modem(options)](#modem-options)
     * [getConfig()](#getConfig)
     * [setConfig(options)](#setConfig-options)
-    * [open(path)](#promise open-path)
+    * [open(path)](#open-path)
     * [isOpen()](#isOpen)
     * [pause()](#pause)
     * [close(callback)](#close-callback)
@@ -47,10 +55,10 @@ __Please note that this is still a beta version__
     * [clearPendingCommands()](#clearPendingCommands)
     * [getCurrentCommand()](#getCurrentCommand)
     * [abortCurrentCommand()](#abortCurrentCommand)
-    * [run(command, expected, callback, processor)](#promise-run-command-expected-callback-processor)
-    * [addCommand(command, expected, callback, processor)](#promise-addCommand-command-expected-callback-processor)
-    * [read(n, callback)](#promise-read-n-callback)
-    * [write(buf, callback)](#promise-write-buffer-callback)
+    * [run(command, expected, options)](#run-command-expected-options)
+    * [addCommand(command, expected, options)](#addCommand-command-expected-options)
+    * [read(n)](#read-n)
+    * [write(buf)](#write-buffer)
     * [getInBuffer()](#)
     * [clearInBuffer()](#)
     * [getNotifications()](#)
@@ -110,18 +118,20 @@ __Please note that this is still a beta version__
         // identical to previous command
         modem.addCommand('AT+CMG=1', undefined);
 
-        // with expected result 'OK', and callback
-        modem.addCommand('AT+FOOO', 'OK', function(success){
-            if (success){
-                // success is boolean iff the response string matches the second argument
-            }
-        }).then((success) => {
-            // this function should be called before the callback function also provided above
+        // with expected result 'OK' and command specific timeout
+        modem.addCommand('AT+FOOO', 'OK', {
+            timeout: 10000
+        }).then(function(){
+            // command got expected response
+        }).catch(function(command){
+            // some error occurred
         });
 
         // consider the next incoming 6 bytes as the wanted response
-        modem.addcommand('AT+FOOO', 6).then(function(buffer){
-
+        modem.addCommand('AT+FOOO', 6).then(function(buffer){
+            // buffer contains the next 6 incoming bytes (please note, that beginning CR + NL characters are trimmed automatically, thus (at the moment) if you expect to be reading only these characters your logic will fail)
+        }).catch(function(command){
+            // most likely to fail only if there is a timeout
         });
 
         modem.addCommand('AT+CREG=?', /\+CREG=(.*),(.*)/).then((matches) => {
@@ -131,8 +141,8 @@ __Please note that this is still a beta version__
         modem.addCommand('AT+FOOO',  function(buffer){
             // complex response detectors are passed the updated response buffer contents whenever there is new data arriving
             var str = buffer.toString();
-            if (str.matches(/^\r\nOK/r/n/){
-                return 6; // return the byte count the response (these many bytes will be consumed from the buffer)
+            if (str.matches(/^OK/r/n/){
+                return 4; // return the byte count the response (these many bytes will be consumed from the buffer)
             }
             return 0; // return 0 if expected response not received yet
         }).then((buffer) => {
@@ -141,9 +151,9 @@ __Please note that this is still a beta version__
 
 
         // add a notification
-        modem.addNotification('myEventName', /+CMI=(.*),(.*)/, function(buffer, matches) {
+        modem.addNotification('myEventName', /^+CMI=(.*),(.*)/, function(buffer, matches) {
             modem.addCommand("AT+CMR="+matches[1], parseInt(matches[2])).then((buf) => {
-                // buf containes my wanted result
+                // buf contains my wanted result
             });
         });
 
@@ -201,13 +211,27 @@ The following setup illustrates the differences
                 break;
 
             case CommandStates.Running:
-                // this state should never occur in an error case
+                // this state should never occur in an error/catch case
                 // it denotes that the command is being processed by the modem
                 break;
 
             case CommandStates.Finished:
-                // this state should never occur in an error case
+                // this state should never occur in an error/catch case
                 // it denotes that the command terminated as configured
+
+                // command.result.buf -> read buffer that satisfied the expected result requirements
+
+                break;
+
+            case CommandStates.Failed:
+                // this state occurs if the commands result processor function returns an undefined value
+                // by default this will also be the case if the expected result is a string type and the read in line
+                // did not match (thus causing a rejection)
+                // note that if you provide result processor functions yourself, you might want to be aware of this (or
+                // make use of it)
+
+                // command.result.buf -> read line that did not match
+
                 break;
 
             case CommandStates.Timeout:
@@ -245,14 +269,16 @@ Returns config..
 * `stopBits`: See https://www.npmjs.com/package/serialport#serialport-path-options-opencallback
 * `EOL`: (default: `"\r\n"`) Command termination string (is added to every normal string type command)
 * `lineRegex`: (default `"^(.+)\r\n"`) This RegExp is used to detect one-line responses and notifications.
-* `timeout`: (default: `500`) default command timeout in millisec
+* `timeout`: (default: `500`) default command timeout in millisec as well as the unsolicited notification timeout
 * `defaultExpectdResult`: (default: `"OK"`) Expected result if none given (see run(), addCommand)
 
-#### Promise open (path)
+#### open (path)
 
 **_path_**
 
 Denotes path to serial port (on linux typically something like `/tty/tty.serialXYZ`, on windows `COM4`)
+
+Returns a promise.
 
 #### isOpen ()
 Facade for https://www.npmjs.com/package/serialport#isopen
@@ -312,20 +338,27 @@ If it is a (Command)[#command], any other parameters are ignored, otherwise the 
 * `timeout`: command timeout in msec (if not defined, default of modem is used, see setConfig())
 * `resultProcessor`: result preprocessor, it's result will be considered the processed and final result as passed to promise
 
+Returns a promise.
+
 
 #### addCommand (command, expected, options)
 
 Adds the given command to the pending commands list.
 The calling semantics are identical to `run(command, expected, callback, processor)`
 
-#### Promise read (n, )
+Returns a promise.
+
+
+#### read (n)
 Shortcut helper to `run` a command that just reads n bytes.
+NOTE: after some refactoring initial CR|NL are automatically discarded and will thus never be read. This will likely have to change..
 
 **_number n (required)_**
 
 Number of bytes to read.
 
 Returns a promise.
+
 
 #### write (buffer)
 Shortcut helper to `run` a command that just writes `buffer` to serial and does not wait for a response.
@@ -348,7 +381,7 @@ Get array of registered notifications.
 #### clearNotifications ()
 Clear deregister all notifications.
 
-#### .addNotification (notification, regex, handler)
+#### addNotification (notification, regex, handler)
 Register a new notification.
 
 **_string|Notification notification (required)_**
@@ -372,12 +405,12 @@ Unregister notification with given name.
 
     var Command = require('at-commander').Command;
 
-    var myCommand = new Command(command, expected, callback, processor);
+    var myCommand = new Command(command, expected, options);
 
     modem.run(myCommand); // or
     modem.addCommand(myCommand);
 
-The constructor semantics are very much identical to the options of [run(command, expected, callback, processor)](#run-command-expected-callback-processor) which serves as shortcut.
+The constructor semantics are very much identical to the options of [run(command, expected, options)](#run-command-expected-options) which serves as shortcut.
 
 ### Notification
 
