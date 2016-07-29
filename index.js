@@ -11,6 +11,7 @@ const CommandStateInit      = 'init';
 const CommandStateRejected  = 'rejected';
 const CommandStateRunning   = 'running';
 const CommandStateFinished  = 'finished';
+const CommandStateFailed    = 'failed';
 const CommandStateTimeout   = 'timeout';
 const CommandStateAborted   = 'aborted';
 
@@ -19,6 +20,7 @@ exports.CommandStates = {
     Rejected    : CommandStateRejected,
     Running     : CommandStateRunning,
     Finished    : CommandStateFinished,
+    Failed      : CommandStateFailed,
     Timeout     : CommandStateTimeout,
     Aborted     : CommandStateAborted
 };
@@ -78,10 +80,16 @@ function Command(buf, expectedResult, opts)
     } else if (typeof opts.resultProcessor === 'undefined' || opts.resultProcessor === true) {
         if (typeof this.expectedResult === 'string') {
             this.resultProcessor = function(buf, result) {
+                var r;
                 if (result instanceof Array){
-                    return result[1] == this.expectedResult;
+                    r = result[1] == this.expectedResult;
                 } else {
-                    return result == this.expectedResult;
+                    r = result == this.expectedResult;
+                }
+                if (r){
+                    return true;
+                } else {
+                    return; // return undefined
                 }
             };
         } else if (this.expectedResult instanceof RegExp) {
@@ -417,7 +425,7 @@ function _promiseForCommand(command)
             clearInterval(command._interval);
             // console.log(command);
             if (command.state == CommandStateFinished){
-                if (command.result.processed) {
+                if (typeof command.result.processed !== 'undefined') {
                     resolve(command.result.processed);
                 } else {
                     resolve(command.result);
@@ -425,7 +433,7 @@ function _promiseForCommand(command)
             } else {
                 reject(command);
             }
-        },100);
+        }, 100);
     });
 }
 
@@ -704,6 +712,8 @@ Modem.prototype._setBufferTimeout = function()
             modem.currentCommand = false;
             command.state = CommandStateTimeout;
 
+            modem._checkPendingCommands();
+
         } else {
 
             // if there happen to be unexpected notifications they might block following notifications which we do
@@ -751,6 +761,13 @@ Modem.prototype._serveCommand = function(command, state, buf, matches)
     };
     if (typeof command.resultProcessor === 'function'){
         command.result.processed = command.resultProcessor(buf, matches);
+
+        // If a result processor is given, but it returns an undefined result, consider the command to have failed
+        // thereby any failing commands will be rejected (catched respectively), which is meaningful behaviour
+        // note: mostly this will be interesting for simple (string based) commands
+        if (typeof command.result.processed === 'undefined'){
+            state = CommandStateFailed;
+        }
     }
 
     // by setting the state to a final state, the promise will finish by itself
