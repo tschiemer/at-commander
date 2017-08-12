@@ -1,7 +1,6 @@
 "use strict";
 
 var SerialPort = require('serialport');
-var Promise = require('promise');
 
 exports.Modem = Modem;
 exports.Command = Command;
