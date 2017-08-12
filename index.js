@@ -81,7 +81,7 @@ function Command(buf, expectedResult, opts)
             this.resultProcessor = function(buf, result) {
                 var r;
                 if (result instanceof Array){
-                    r = result[0] == this.expectedResult;
+                    r = result[1] == this.expectedResult;
                 } else {
                     r = result == this.expectedResult;
                 }
