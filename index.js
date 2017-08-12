@@ -81,7 +81,7 @@ function Command(buf, expectedResult, opts)
             this.resultProcessor = function(buf, result) {
                 var r;
                 if (result instanceof Array){
-                    r = result[1] == this.expectedResult;
+                    r = result[0] == this.expectedResult;
                 } else {
                     r = result == this.expectedResult;
                 }
@@ -184,7 +184,7 @@ Modem.prototype._registerSerialEvents = function(){
         modem._onData(data);
 
         if (typeof modem.events.data === 'function'){
-            modem.events.data(error);
+            modem.events.data(data);
         }
     });
     this.serial.on('disconnect', function(error){
@@ -538,6 +538,14 @@ Modem.prototype._onData = function(data)
         var matches = null;
 
         if (typeof this.currentCommand.expectedResult === 'string') {
+
+            /*
+            in mythfish's fork he changes the matchexpression to this.config.currentCommand.expectedResult
+             Actually this here is the wanted behaviour where we assume that the asnwer is given on a line, thus
+              the response is matched against lineRegex and not the given (string) expected result
+              The final check wether the command actually succeeded is made in the result processor for commands with a
+              string type expected result
+             */
             var str = this.inbuf.toString();
             matches = str.match(this.config.lineRegex);
             if (matches) {
