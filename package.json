@@ -1,6 +1,6 @@
 {
   "name": "at-commander",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "description": "AT Command handler for serial ports",
   "main": "index.js",
   "scripts": {
@@ -25,7 +25,6 @@
   },
   "homepage": "https://github.com/smart-home-technology/at-commander#readme",
   "dependencies": {
-    "serialport": "latest",
-    "promise": "latest"
+    "serialport": "5.0.0"
   }
 }
