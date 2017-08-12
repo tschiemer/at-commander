@@ -1,6 +1,6 @@
 "use strict";
 
-var serialport = require('serialport');
+var SerialPort = require('serialport');
 var Promise = require('promise');
 
 exports.Modem = Modem;
@@ -26,7 +26,7 @@ exports.CommandStates = {
 };
 
 var defaultConfig = {
-    parser: serialport.parsers.raw,
+    parser: SerialPort.parsers.raw,
     baudRate: 115200,
     dataBits: 8,
     stopBits: 1,
@@ -144,12 +144,12 @@ Modem.prototype.setConfig = function(newConfig){
 Modem.prototype.open = function(path)
 {
 
-    if (this.serial instanceof serialport.SerialPort && this.serial.isOpen()){
+    if (this.serial instanceof SerialPort && this.serial.isOpen){
         this.serial.close();
     }
 
 
-    this.serial = new serialport.SerialPort(path, {
+    this.serial = new SerialPort(path, {
         parser: this.config.parser,
         baudRate: this.config.baudRate,
         dataBits: this.config.dataBits,
@@ -167,7 +167,7 @@ Modem.prototype.open = function(path)
                 // write a newline to the serial because it is unknown what was last written to the serial before opening
                 modem.serial.write(modem.config.EOL);
 
-                resolve(modem.serial.isOpen());
+                resolve(modem.serial.isOpen);
             }
         });
     });
@@ -211,15 +211,15 @@ Modem.prototype._registerSerialEvents = function(){
 
 Modem.prototype.isOpen = function()
 {
-    if (!(this.serial instanceof serialport.SerialPort)){
+    if (!(this.serial instanceof SerialPort)){
         return false;
     }
-    return this.serial.isOpen();
+    return this.serial.isOpen;
 };
 
 Modem.prototype.pauseSerial = function()
 {
-    if (!(this.serial instanceof serialport.SerialPort)){
+    if (!(this.serial instanceof SerialPort)){
         return false;
     }
     this.serial.pause();
@@ -228,7 +228,7 @@ Modem.prototype.pauseSerial = function()
 
 Modem.prototype.resumeSerial = function()
 {
-    if (!(this.serial instanceof serialport.SerialPort)){
+    if (!(this.serial instanceof SerialPort)){
         return false;
     }
     this.serial.resume();
@@ -255,7 +255,7 @@ Modem.prototype._close = function(cb, gracefully)
         }
     }
 
-    if (this.serial instanceof serialport.SerialPort){
+    if (this.serial instanceof SerialPort){
         if (gracefully && this.processCommands && (this.currentCommand instanceof Command || this.pendingCommands.length)){
             this.addCommand("AT").done(() => {
                 this.serial.close(cb);
@@ -516,6 +516,7 @@ Modem.prototype._run = function(command)
 
 Modem.prototype._onData = function(data)
 {
+
     // update buffer
     this.inbuf = Buffer.concat([this.inbuf, data]);
 
@@ -527,7 +528,7 @@ Modem.prototype._onData = function(data)
         }
     }
 
-    // console.log("INBUF", this.inbuf, this.inbuf.toString());
+     //console.log("INBUF", this.inbuf, this.inbuf.toString());
 
 
     // if a command was previously sent, we are expecting a result
