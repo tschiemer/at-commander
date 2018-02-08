@@ -1,6 +1,6 @@
 {
   "name": "at-commander",
-  "version": "1.0.0-beta.6",
+  "version": "1.0.0-beta.7",
   "description": "AT Command handler for serial ports",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/smart-home-technology/at-commander.git"
+    "url": "git+https://github.com/tschiemer/at-commander.git"
   },
   "keywords": [
     "at command",
@@ -19,11 +19,11 @@
     "port"
   ],
   "author": "Philip Tschiemer",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/smart-home-technology/at-commander/issues"
+    "url": "https://github.com/tschiemer/at-commander/issues"
   },
-  "homepage": "https://github.com/smart-home-technology/at-commander#readme",
+  "homepage": "https://github.com/tschiemer/at-commander#readme",
   "dependencies": {
     "serialport": "5.0.0"
   }
